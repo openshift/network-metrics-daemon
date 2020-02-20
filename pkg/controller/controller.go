@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -13,6 +14,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
+
+	"github.com/openshift/network-metrics-daemon/pkg/podmetrics"
+	"github.com/openshift/network-metrics-daemon/pkg/podnetwork"
 )
 
 // Controller is the controller implementation for Foo resources
@@ -40,14 +44,22 @@ func New(
 
 	klog.Info("Setting up event handlers")
 
-	// TODO check if can be done only for the current node
 	podsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.enqueuePod,
+		AddFunc: func(obj interface{}) {
+			pod := obj.(*v1.Pod)
+			_, ok := pod.Annotations[podnetwork.Status]
+			if !ok {
+				return
+			}
+			controller.enqueuePod(pod)
+		},
 		UpdateFunc: func(old, new interface{}) {
-			/* newPod := new.(*v1.Pod)
+			newPod := new.(*v1.Pod)
 			oldPod := old.(*v1.Pod)
-				TODO implement the filter logic here
-			*/
+
+			if newPod.Annotations[podnetwork.Status] == oldPod.Annotations[podnetwork.Status] {
+				return
+			}
 			controller.enqueuePod(new)
 		},
 		DeleteFunc: controller.enqueuePod,
@@ -140,7 +152,7 @@ func (c *Controller) podHandler(key string) error {
 	pod, err := c.podsLister.Pods(namespace).Get(name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// TODO Handle deletion
+			podmetrics.DeleteAllForPod(name, namespace)
 			return nil
 		}
 
@@ -148,7 +160,16 @@ func (c *Controller) podHandler(key string) error {
 	}
 
 	klog.Infof("Received pod '%s'", pod.Name)
+	networks, err := podnetwork.Get(pod)
+	if err != nil {
+		return err
+	}
 
+	// As an interface might have been removed from the pod (or changed)
+	// and eventually re-add them, as the chance of having the networks changed is
+	// pretty low
+	podmetrics.DeleteAllForPod(name, namespace)
+	podmetrics.UpdateForPod(pod.Name, pod.Namespace, networks)
 	return nil
 }
 
