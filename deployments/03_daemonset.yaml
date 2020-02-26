@@ -1,0 +1,44 @@
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: network-metrics-daemon
+  namespace: $NAMESPACE
+spec:
+  selector:
+    matchLabels:
+      app: network-metrics-daemon
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: network-metrics-daemon
+        component: network
+        type: infra
+        openshift.io/component: network
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: network-metrics-daemon
+          image: $IMAGE_TAG
+          command:
+            - /usr/bin/network-metrics
+          resources:
+            requests:
+              cpu: 10m
+              memory: 100Mi
+          imagePullPolicy: Always
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      serviceAccountName: metrics-daemon-sa

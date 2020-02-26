@@ -31,8 +31,8 @@ var (
 		prometheus.GaugeOpts{
 			Name: "network_attachment_definition_per_pod",
 			Help: "Metric to identify clusters with network attachment definition enabled instances.",
-		}, []string{"pod",
-			"namespace",
+		}, []string{"metricspod",
+			"metricsnamespace",
 			"interface",
 			"networkname"})
 )
@@ -47,10 +47,10 @@ func UpdateForPod(podName, namespace string, networks []podnetwork.Network) {
 		}
 
 		labels := prometheus.Labels{
-			"pod":         podName,
-			"namespace":   namespace,
-			"interface":   n.Interface,
-			"networkname": n.NetworkName,
+			"metricspod":       podName,
+			"metricsnamespace": namespace,
+			"interface":        n.Interface,
+			"networkname":      n.NetworkName,
 		}
 		NetAttachDefPerPod.With(labels).Add(0)
 	}
@@ -73,10 +73,10 @@ func DeleteAllForPod(podName, namespace string) {
 
 	for _, n := range nets {
 		labels := prometheus.Labels{
-			"pod":         podName,
-			"namespace":   namespace,
-			"interface":   n.Interface,
-			"networkname": n.NetworkName,
+			"metricspod":       podName,
+			"metricsnamespace": namespace,
+			"interface":        n.Interface,
+			"networkname":      n.NetworkName,
 		}
 		NetAttachDefPerPod.Delete(labels)
 	}
@@ -90,7 +90,6 @@ func Serve(metricsAddress string, stopCh <-chan struct{}) {
 	prometheus.Unregister(prometheus.NewGoCollector())
 
 	prometheus.MustRegister(NetAttachDefPerPod)
-
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 
