@@ -32,7 +32,8 @@ type Controller struct {
 // New returns a new controller listening to pods.
 func New(
 	kubeclientset kubernetes.Interface,
-	podsInformer coreinformers.PodInformer) *Controller {
+	podsInformer coreinformers.PodInformer,
+	currentNode string) *Controller {
 
 	controller := &Controller{
 		kubeclientset: kubeclientset,
@@ -51,6 +52,9 @@ func New(
 			if !ok {
 				return
 			}
+			if pod.Spec.NodeName != currentNode {
+				return
+			}
 			controller.enqueuePod(pod)
 		},
 		UpdateFunc: func(old, new interface{}) {
@@ -60,9 +64,18 @@ func New(
 			if newPod.Annotations[podnetwork.Status] == oldPod.Annotations[podnetwork.Status] {
 				return
 			}
+			if newPod.Spec.NodeName != currentNode {
+				return
+			}
 			controller.enqueuePod(new)
 		},
-		DeleteFunc: controller.enqueuePod,
+		DeleteFunc: func(obj interface{}) {
+			pod := obj.(*v1.Pod)
+			if pod.Spec.NodeName != currentNode {
+				return
+			}
+			controller.enqueuePod(pod)
+		},
 	})
 
 	return controller
