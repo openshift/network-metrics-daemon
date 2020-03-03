@@ -11,3 +11,6 @@ gofmt:
 build-bin:
 	go build --mod=vendor -o bin/network-metrics-daemon
 	chmod +x bin/network-metrics-daemon
+
+unittests:
+	go test ./...
