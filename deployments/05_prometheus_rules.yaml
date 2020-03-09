@@ -1,0 +1,29 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: network-metrics-with-network-name
+  namespace: $MONITORING_NAMESPACE
+  labels:
+    app: network-metrics
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+    - name: groupname
+      rules:
+        - record: container_network_receive_bytes_total_intf
+          expr: (container_network_receive_bytes_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
+        - record: container_network_receive_errors_total_intf
+          expr: (container_network_receive_errors_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
+        - record: container_network_receive_packets_total_intf
+          expr: (container_network_receive_packets_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
+        - record: container_network_receive_packets_dropped_total_intf
+          expr: (container_network_receive_packets_dropped_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
+        - record: container_network_transmit_bytes_total_intf
+          expr: (container_network_transmit_bytes_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
+        - record: container_network_transmit_errors_total_intf
+          expr: (container_network_transmit_errors_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
+        - record: container_network_transmit_packets_total_intf
+          expr: (container_network_transmit_packets_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
+        - record: container_network_transmit_packets_dropped_total_intf
+          expr: (container_network_transmit_packets_dropped_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )

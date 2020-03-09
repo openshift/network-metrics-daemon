@@ -1,5 +1,14 @@
 .PHONY: deps-update
 
+export DOCKERFILE?=Dockerfile
+export IMAGE_BASE?=quay.io/fpaoline/network-metrics-daemon
+export TAG?=latest
+export NAMESPACE?=openshift-network-metrics
+export MONITORING_NAMESPACE?=openshift-monitoring
+export KUBE_EXEC?=oc
+export IMAGE_TAG:=$(IMAGE_BASE):$(TAG)
+
+
 deps-update:
 	go mod tidy && \
 	go mod vendor
@@ -14,3 +23,13 @@ build-bin:
 
 unittests:
 	go test ./...
+
+image: ; $(info Building image...)
+	docker build -f $(DOCKERFILE) -t $(IMAGE_TAG) .
+
+image_push: ; $(info Building image...)
+	docker image push $(IMAGE_TAG)
+
+deploy:
+	hack/deploy.sh
+

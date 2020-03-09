@@ -1,0 +1,78 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    name: monitor-network
+  name: monitor-network
+  namespace: $NAMESPACE
+spec:
+  endpoints:
+    - interval: 10s
+      port: metrics
+      metricRelabelings:
+        - sourceLabels: [pod]
+          targetLabel: sourcepod
+        - sourceLabels: [namespace]
+          targetLabel: sourcenamespace
+        - sourceLabels: [metricspod]
+          targetLabel: pod
+        - sourceLabels: [metricsnamespace]
+          targetLabel: namespace
+  selector:
+    matchLabels:
+      service: network-metrics-service
+  namespaceSelector:
+    matchNames:
+      - $NAMESPACE
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+  labels:
+    service: network-metrics-service
+  name: network-metrics-service
+  namespace: $NAMESPACE
+spec:
+  selector:
+    app: network-metrics-daemon
+  clusterIP: None
+  ports:
+    - name: metrics
+      port: 9091
+      protocol: TCP
+      targetPort: 9091
+  type: ClusterIP
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-k8s
+  namespace: $NAMESPACE
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - endpoints
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-k8s
+  namespace: $NAMESPACE
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-k8s
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-k8s
+    namespace: $MONITORING_NAMESPACE

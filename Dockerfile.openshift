@@ -1,0 +1,24 @@
+# This dockerfile is specific to building the network metrics daemon for OpenShift
+FROM openshift/origin-release:golang-1.13 as builder
+
+# Add everything
+ENV PKG_NAME=github.com/openshift/network-metrics-daemon
+ENV PKG_PATH=/go/src/$PKG_NAME
+RUN mkdir -p $PKG_PATH
+
+COPY . $PKG_PATH/
+WORKDIR $PKG_PATH
+
+RUN make build-bin
+
+WORKDIR /
+
+FROM openshift/origin-base
+COPY --from=builder /go/src/github.com/openshift/network-metrics-daemon/bin/network-metrics-daemon /usr/bin/network-metrics
+
+LABEL io.k8s.display-name="Network Metrics Daemon" \
+      io.k8s.description="This is a component of OpenShift Container Platform and provides a daemon that exposes admission controller for Multus CNI custom resources." \
+      io.openshift.tags="openshift" \
+      maintainer="Federico Paolinelli <fpaoline@redhat.com>"
+
+CMD ["/usr/bin/network-metrics"]
