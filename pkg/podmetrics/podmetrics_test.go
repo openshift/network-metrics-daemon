@@ -24,8 +24,8 @@ var podMetricsTests = []struct {
 			podmetrics.UpdateForPod("podname", "namespacename", networks)
 		},
 		`
-			network_attachment_definition_per_pod{interface="eth0",metricsnamespace="namespacename",metricspod="podname",networkname="firstNAD"} 0
-			network_attachment_definition_per_pod{interface="eth1",metricsnamespace="namespacename",metricspod="podname",networkname="firstNAD"} 0
+			pod_network_name_info{interface="eth0",network_name="firstNAD",source_namespace="namespacename",source_pod="podname"} 0
+			pod_network_name_info{interface="eth1",network_name="firstNAD",source_namespace="namespacename",source_pod="podname"} 0
 			`,
 	},
 	{
@@ -38,8 +38,8 @@ var podMetricsTests = []struct {
 			podmetrics.UpdateForPod("podname", "namespacename", networks)
 		},
 		`
-			network_attachment_definition_per_pod{interface="eth0",metricsnamespace="namespacename",metricspod="podname",networkname="firstNAD"} 0
-			network_attachment_definition_per_pod{interface="eth1",metricsnamespace="namespacename",metricspod="podname",networkname="secondNAD"} 0
+			pod_network_name_info{interface="eth0",network_name="firstNAD",source_namespace="namespacename",source_pod="podname"} 0
+			pod_network_name_info{interface="eth1",network_name="secondNAD",source_namespace="namespacename",source_pod="podname"} 0
 			`,
 	},
 	{
@@ -71,7 +71,7 @@ var podMetricsTests = []struct {
 
 		},
 		`
-			network_attachment_definition_per_pod{interface="eth0",metricsnamespace="namespacename",metricspod="podname2",networkname="firstNAD"} 0
+			pod_network_name_info{interface="eth0",network_name="firstNAD",source_namespace="namespacename",source_pod="podname2"} 0
 
 		`,
 	},
@@ -80,8 +80,8 @@ var podMetricsTests = []struct {
 func TestPodMetrics(t *testing.T) {
 
 	const metadata = `
-	# HELP network_attachment_definition_per_pod Metric to identify clusters with network attachment definition enabled instances.
-	# TYPE network_attachment_definition_per_pod gauge
+	# HELP pod_network_name_info Metric to identify network names of networks added to pods.
+	# TYPE pod_network_name_info gauge
 	`
 
 	for _, tst := range podMetricsTests {

@@ -29,12 +29,12 @@ var (
 	// pod
 	NetAttachDefPerPod = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "network_attachment_definition_per_pod",
-			Help: "Metric to identify clusters with network attachment definition enabled instances.",
-		}, []string{"metricspod",
-			"metricsnamespace",
+			Name: "pod_network_name_info",
+			Help: "Metric to identify network names of networks added to pods.",
+		}, []string{"source_pod",
+			"source_namespace",
 			"interface",
-			"networkname"})
+			"network_name"})
 )
 
 //UpdateForPod adds metrics for all the provided networks to the given pod.
@@ -47,10 +47,10 @@ func UpdateForPod(podName, namespace string, networks []podnetwork.Network) {
 		}
 
 		labels := prometheus.Labels{
-			"metricspod":       podName,
-			"metricsnamespace": namespace,
+			"source_pod":       podName,
+			"source_namespace": namespace,
 			"interface":        n.Interface,
-			"networkname":      n.NetworkName,
+			"network_name":     n.NetworkName,
 		}
 		NetAttachDefPerPod.With(labels).Add(0)
 	}
@@ -73,10 +73,10 @@ func DeleteAllForPod(podName, namespace string) {
 
 	for _, n := range nets {
 		labels := prometheus.Labels{
-			"metricspod":       podName,
-			"metricsnamespace": namespace,
+			"source_pod":       podName,
+			"source_namespace": namespace,
 			"interface":        n.Interface,
-			"networkname":      n.NetworkName,
+			"network_name":     n.NetworkName,
 		}
 		NetAttachDefPerPod.Delete(labels)
 	}

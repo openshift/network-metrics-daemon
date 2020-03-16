@@ -9,21 +9,21 @@ metadata:
     role: alert-rules
 spec:
   groups:
-    - name: groupname
+    - name: network_with_name
       rules:
-        - record: container_network_receive_bytes_total_intf
-          expr: (container_network_receive_bytes_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
-        - record: container_network_receive_errors_total_intf
-          expr: (container_network_receive_errors_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
-        - record: container_network_receive_packets_total_intf
-          expr: (container_network_receive_packets_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
-        - record: container_network_receive_packets_dropped_total_intf
-          expr: (container_network_receive_packets_dropped_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
-        - record: container_network_transmit_bytes_total_intf
-          expr: (container_network_transmit_bytes_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
-        - record: container_network_transmit_errors_total_intf
-          expr: (container_network_transmit_errors_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
-        - record: container_network_transmit_packets_total_intf
-          expr: (container_network_transmit_packets_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
-        - record: container_network_transmit_packets_dropped_total_intf
-          expr: (container_network_transmit_packets_dropped_total) + on(namespace,pod,interface) group_left(networkname) ( network_attachment_definition_per_pod )
+        - record: network:container_network_receive_bytes_total
+          expr: (container_network_receive_bytes_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_receive_errors_total
+          expr: (container_network_receive_errors_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_receive_packets_total
+          expr: (container_network_receive_packets_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_receive_packets_dropped_total
+          expr: (container_network_receive_packets_dropped_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_transmit_bytes_total
+          expr: (container_network_transmit_bytes_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_transmit_errors_total
+          expr: (container_network_transmit_errors_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_transmit_packets_total
+          expr: (container_network_transmit_packets_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_transmit_packets_dropped_total
+          expr: (container_network_transmit_packets_dropped_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
