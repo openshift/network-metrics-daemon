@@ -12,12 +12,12 @@ spec:
       port: metrics
       metricRelabelings:
         - sourceLabels: [pod]
-          targetLabel: sourcepod
+          targetLabel: __pod
         - sourceLabels: [namespace]
-          targetLabel: sourcenamespace
-        - sourceLabels: [metricspod]
+          targetLabel: __namespace
+        - sourceLabels: [source_pod]
           targetLabel: pod
-        - sourceLabels: [metricsnamespace]
+        - sourceLabels: [source_namespace]
           targetLabel: namespace
   selector:
     matchLabels:
