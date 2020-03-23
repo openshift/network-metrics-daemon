@@ -25,18 +25,19 @@ This is fine until new interfaces are added to the pod, for example via [multus]
 
 ## Metrics with network name
 
-This daemonset publishes new metrics, containing the same information as the aforementioned ones, but with a new `networkname` label containing the name of the network. The network name is retrieved from the `k8s.v1.cni.cncf.io/networks-status` annotation.
+This daemonset publishes new metrics, containing the same information as the aforementioned ones, but with a new `network_name` label containing the name of the network. The network name is retrieved from the `k8s.v1.cni.cncf.io/networks-status` annotation.
 
 The new set of metrics are named after:
 
-- container_network_receive_bytes_total_intf
-- container_network_receive_errors_total_intf
-- container_network_receive_packets_total_intf
-- container_network_receive_packets_dropped_total_intf
-- container_network_transmit_bytes_total_intf
-- container_network_transmit_errors_total_intf
-- container_network_transmit_packets_total_intf
-- container_network_transmit_packets_dropped_total_intf
+- network:container_network_receive_bytes_total
+- network:container_network_receive_bytes_total
+- network:container_network_receive_errors_total
+- network:container_network_receive_packets_total
+- network:container_network_receive_packets_dropped_total
+- network:container_network_transmit_bytes_total
+- network:container_network_transmit_errors_total
+- network:container_network_transmit_packets_total
+- network:container_network_transmit_packets_dropped_total
 
 and will make it possible to aggregate and set alarms on network classification basis.
 
@@ -46,7 +47,7 @@ This daemonset listens for the pods running on the same node it's running, finds
 
 A new recording rule is used to produce a new metric out of joining with the existing metrics produced by the kubelet.
 
-This is achieved by joining the metrics produced by this daemon with the existing one, in the recording rules that can be found under [deployments/04_prometheus_rules.yaml].
+This is achieved by joining the metrics produced by this daemon with the existing one, in the recording rules that can be found under [deployments/05_prometheus_rules.yaml](deployments/05_prometheus_rules.yaml).
 
 ## Deploy
 
