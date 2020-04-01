@@ -6,7 +6,9 @@ export TAG?=latest
 export NAMESPACE?=openshift-network-metrics
 export MONITORING_NAMESPACE?=openshift-monitoring
 export KUBE_EXEC?=oc
+export KUBE_RBAC_PROXY?=quay.io/openshift/origin-kube-rbac-proxy:latest
 export IMAGE_TAG:=$(IMAGE_BASE):$(TAG)
+
 
 
 deps-update:

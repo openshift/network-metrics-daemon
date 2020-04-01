@@ -19,6 +19,11 @@ spec:
           targetLabel: pod
         - sourceLabels: [source_namespace]
           targetLabel: namespace
+      bearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+      scheme: "https"
+      tlsConfig:
+        caFile: "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt"
+        serverName: "network-metrics-service.$NAMESPACE.svc"
   selector:
     matchLabels:
       service: network-metrics-service
@@ -31,6 +36,7 @@ kind: Service
 metadata:
   annotations:
     prometheus.io/scrape: "true"
+    service.alpha.openshift.io/serving-cert-secret-name: metrics-daemon-secret
   labels:
     service: network-metrics-service
   name: network-metrics-service
@@ -41,9 +47,8 @@ spec:
   clusterIP: None
   ports:
     - name: metrics
-      port: 9091
-      protocol: TCP
-      targetPort: 9091
+      port: 8443
+      targetPort: https
   type: ClusterIP
 ---
 apiVersion: rbac.authorization.k8s.io/v1
