@@ -27,6 +27,7 @@ spec:
           image: $IMAGE_TAG
           command:
             - /usr/bin/network-metrics
+          args: ["--node-name", "${DOLLAR}(NODE_NAME)"]
           resources:
             requests:
               cpu: 10m
@@ -37,10 +38,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
         - name: kube-rbac-proxy
           image: $KUBE_RBAC_PROXY
           args:

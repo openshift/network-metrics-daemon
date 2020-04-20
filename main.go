@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"os"
 	"time"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -28,11 +27,12 @@ func main() {
 	flag.StringVar(&config.kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&config.masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&config.metricsAddress, "metrics-listen-address", ":9091", "metrics server listen address.")
+	flag.StringVar(&config.currentNode, "node-name", "", "the node the daemon is running on.")
+
 	flag.Parse()
 
-	config.currentNode = os.Getenv("NODE_NAME")
 	if config.currentNode == "" {
-		klog.Fatalf("NODE_NAME required environment variable not set")
+		klog.Fatalf("--node-name required parameter not set")
 	}
 
 	klog.Info("Starting with config", config)
