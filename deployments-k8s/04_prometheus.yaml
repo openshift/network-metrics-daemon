@@ -5,49 +5,44 @@ metadata:
   labels:
     name: monitor-network
   name: monitor-network
-  namespace: $NAMESPACE
+  namespace: network-metrics
 spec:
   endpoints:
     - interval: 10s
       port: metrics
       honorLabels: true
-      bearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token"
-      scheme: "https"
-      tlsConfig:
-        caFile: "/etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt"
-        serverName: "network-metrics-service.$NAMESPACE.svc"
   selector:
     matchLabels:
       service: network-metrics-service
   namespaceSelector:
     matchNames:
-      - $NAMESPACE
+      - network-metrics
 ---
 apiVersion: v1
 kind: Service
 metadata:
   annotations:
     prometheus.io/scrape: "true"
-    service.alpha.openshift.io/serving-cert-secret-name: metrics-daemon-secret
   labels:
     service: network-metrics-service
   name: network-metrics-service
-  namespace: $NAMESPACE
+  namespace: network-metrics
 spec:
   selector:
     app: network-metrics-daemon
   clusterIP: None
   ports:
     - name: metrics
-      port: 8443
-      targetPort: https
+      port: 9091
+      protocol: TCP
+      targetPort: 9091
   type: ClusterIP
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: prometheus-k8s
-  namespace: $NAMESPACE
+  namespace: network-metrics
 rules:
   - apiGroups:
       - ""
@@ -64,7 +59,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: prometheus-k8s
-  namespace: $NAMESPACE
+  namespace: network-metrics
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -72,4 +67,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: prometheus-k8s
-    namespace: $MONITORING_NAMESPACE
+    namespace: monitoring

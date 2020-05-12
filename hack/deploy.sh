@@ -6,6 +6,6 @@ export DOLLAR='$'
 
 for file in $(ls -v deployments/); do
     echo "INFO - Applying file deployments/$file"
-    envsubst < deployments/${file} | ${KUBE_EXEC} apply -f -
+    envsubst < deployments$DEPLOYMENT_FLAVOUR/${file} | ${KUBE_EXEC} apply -f -
 done;
 
