@@ -100,7 +100,7 @@ func TestPublishesMetric(t *testing.T) {
 	f.podsLister = append(f.podsLister, pod)
 	f.kubeobjects = append(f.kubeobjects, pod)
 	f.expectedMetrics = `
-	pod_network_name_info{interface="eth0",network_name="kindnet",source_namespace="namespace",source_pod="podname"} 0
+	pod_network_name_info{interface="eth0",namespace="namespace",network_name="kindnet",pod="podname"} 0
 	`
 
 	f.run(func(c *Controller, k8si kubeinformers.SharedInformerFactory) {

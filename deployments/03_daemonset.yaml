@@ -18,8 +18,6 @@ spec:
         type: infra
         openshift.io/component: network
     spec:
-      nodeSelector:
-        node-role.kubernetes.io/worker: ""
       tolerations:
         - operator: Exists
       containers:

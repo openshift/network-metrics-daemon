@@ -52,3 +52,7 @@ This is achieved by joining the metrics produced by this daemon with the existin
 ## Deploy
 
 Running `make deploy` will deploy the daemonset and set up the configuration to tie it to the Prometheus operator instance of an existing OpenShift 4+ cluster.
+
+## Deploy on k8s
+
+Running `make deploy-k8s` will deploy the daemonset and set up the configuration to tie it to the Prometheus operator instance of an existing kubernetes cluster where the prometheus operator was deployed. Please note that the k8s version exposes metrics over a plain http port.

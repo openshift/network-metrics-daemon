@@ -24,8 +24,8 @@ var podMetricsTests = []struct {
 			podmetrics.UpdateForPod("podname", "namespacename", networks)
 		},
 		`
-			pod_network_name_info{interface="eth0",network_name="firstNAD",source_namespace="namespacename",source_pod="podname"} 0
-			pod_network_name_info{interface="eth1",network_name="firstNAD",source_namespace="namespacename",source_pod="podname"} 0
+			pod_network_name_info{interface="eth0",namespace="namespacename",network_name="firstNAD",pod="podname"} 0
+			pod_network_name_info{interface="eth1",namespace="namespacename",network_name="firstNAD",pod="podname"} 0
 			`,
 	},
 	{
@@ -38,8 +38,8 @@ var podMetricsTests = []struct {
 			podmetrics.UpdateForPod("podname", "namespacename", networks)
 		},
 		`
-			pod_network_name_info{interface="eth0",network_name="firstNAD",source_namespace="namespacename",source_pod="podname"} 0
-			pod_network_name_info{interface="eth1",network_name="secondNAD",source_namespace="namespacename",source_pod="podname"} 0
+			pod_network_name_info{interface="eth0",namespace="namespacename",network_name="firstNAD",pod="podname"} 0
+			pod_network_name_info{interface="eth1",namespace="namespacename",network_name="secondNAD",pod="podname"} 0
 			`,
 	},
 	{
@@ -71,7 +71,7 @@ var podMetricsTests = []struct {
 
 		},
 		`
-			pod_network_name_info{interface="eth0",network_name="firstNAD",source_namespace="namespacename",source_pod="podname2"} 0
+			pod_network_name_info{interface="eth0",namespace="namespacename",network_name="firstNAD",pod="podname2"} 0
 
 		`,
 	},

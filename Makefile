@@ -35,3 +35,5 @@ image_push: ; $(info Building image...)
 deploy:
 	hack/deploy.sh
 
+deploy-k8s:
+	DEPLOYMENT_FLAVOUR="-k8s" hack/deploy.sh
