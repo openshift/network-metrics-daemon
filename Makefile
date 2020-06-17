@@ -1,4 +1,8 @@
-.PHONY: deps-update
+.PHONY: deps-update \
+		build-bin \
+		unittests \
+		verify
+
 
 export DOCKERFILE?=Dockerfile
 export IMAGE_BASE?=quay.io/fpaoline/network-metrics-daemon
@@ -15,15 +19,11 @@ deps-update:
 	go mod tidy && \
 	go mod vendor
 
-gofmt:
-	@echo "Running gofmt"
-	gofmt -s -l `find . -path ./vendor -prune -o -type f -name '*.go' -print`
-
 build-bin:
-	go build --mod=vendor -o bin/network-metrics-daemon
+	go build --mod=vendor -ldflags "-X main.build=$$(git rev-parse HEAD)" -o bin/network-metrics-daemon
 	chmod +x bin/network-metrics-daemon
 
-unittests:
+unittests: verify
 	go test ./...
 
 image: ; $(info Building image...)
@@ -37,3 +37,11 @@ deploy:
 
 deploy-k8s:
 	DEPLOYMENT_FLAVOUR="-k8s" hack/deploy.sh
+
+get-tools:
+	hack/get_tools.sh
+
+verify: get-tools
+	./hack/check_gofmt.sh
+	./hack/check_golint.sh
+	./hack/check_changes.sh

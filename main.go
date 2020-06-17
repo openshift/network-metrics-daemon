@@ -14,9 +14,11 @@ import (
 	"github.com/openshift/network-metrics-daemon/pkg/signals"
 )
 
+// build is the git version of this program. It is set using build flags in the makefile.
+var build = "develop"
+
 func main() {
 	klog.InitFlags(nil)
-
 	var config struct {
 		kubeconfig     string
 		masterURL      string
@@ -34,7 +36,7 @@ func main() {
 	if config.currentNode == "" {
 		klog.Fatalf("--node-name required parameter not set")
 	}
-
+	klog.Info("Version:", build)
 	klog.Info("Starting with config", config)
 
 	// set up signals so we handle the first shutdown signal gracefully
