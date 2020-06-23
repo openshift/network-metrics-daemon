@@ -24,7 +24,7 @@ build-bin:
 	chmod +x bin/network-metrics-daemon
 
 unittests: verify
-	go test ./...
+	go test ./pkg/...
 
 image: ; $(info Building image...)
 	docker build -f $(DOCKERFILE) -t $(IMAGE_TAG) .
@@ -45,3 +45,6 @@ verify: get-tools
 	./hack/check_gofmt.sh
 	./hack/check_golint.sh
 	./hack/check_changes.sh
+
+run-test:
+	hack/run-test.sh
