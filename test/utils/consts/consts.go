@@ -1,6 +1,6 @@
-package utils
+package consts
 
 const (
 	// NamespaceTesting contains the name of the testing namespace
-	NamespaceTesting = "network-metrics-daemon-testing"
+	NamespaceTesting = "metrictest"
 )

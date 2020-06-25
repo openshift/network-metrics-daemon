@@ -13,8 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testutils "github.com/openshift/network-metrics-daemon/test/utils"
-	testclient "github.com/openshift/network-metrics-daemon/test/utils/client"
+	"github.com/openshift/network-metrics-daemon/test/utils/client"
+	"github.com/openshift/network-metrics-daemon/test/utils/consts"
 	"github.com/openshift/network-metrics-daemon/test/utils/namespaces"
 
 	_ "github.com/openshift/network-metrics-daemon/test/network-metrics-daemon"
@@ -38,19 +38,19 @@ func Test(t *testing.T) {
 }
 
 var _ = ginkgo.BeforeSuite(func() {
-	gomega.Expect(testclient.Client).NotTo(gomega.BeNil())
+	gomega.Expect(client.Client).NotTo(gomega.BeNil())
 
-	ns := &corev1.Namespace{
+	nameSpace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: testutils.NamespaceTesting,
+			Name: consts.NamespaceTesting,
 		},
 	}
-	_, err := testclient.Client.Namespaces().Create(context.Background(), ns, metav1.CreateOptions{})
+	_, err := client.Client.Namespaces().Create(context.Background(), nameSpace, metav1.CreateOptions{})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 })
 
 var _ = ginkgo.AfterSuite(func() {
-	err := testclient.Client.Namespaces().Delete(context.Background(), testutils.NamespaceTesting, metav1.DeleteOptions{})
+	err := client.Client.Namespaces().Delete(context.Background(), consts.NamespaceTesting, metav1.DeleteOptions{})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	err = namespaces.WaitForDeletion(testclient.Client, testutils.NamespaceTesting, 5*time.Minute)
+	err = namespaces.WaitForDeletion(client.Client, consts.NamespaceTesting, 5*time.Minute)
 })
