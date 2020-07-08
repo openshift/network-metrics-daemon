@@ -3,8 +3,7 @@ package prometheus
 import (
 	"bytes"
 	"context"
-
-	"github.com/onsi/gomega"
+	"errors"
 
 	"github.com/openshift/network-metrics-daemon/test/utils/client"
 	"github.com/openshift/network-metrics-daemon/test/utils/pods"
@@ -30,7 +29,6 @@ type Reply struct {
 				MetricsPath string `json:"metrics_path"`
 				Name        string `json:"name"`
 				Namespace   string `json:"namespace"`
-				NetworkName string `json:"network_name"`
 				Node        string `json:"node"`
 				Pod         string `json:"pod"`
 				Service     string `json:"service"`
@@ -41,16 +39,23 @@ type Reply struct {
 }
 
 // Query allows you to query prometheus
-func Query(query string) bytes.Buffer {
+func Query(query string) (bytes.Buffer, error) {
 	prometheusPods, err := client.Client.Pods(openshiftMonitoringNamespace).List(context.Background(), metav1.ListOptions{
 		LabelSelector: "app=prometheus",
 	})
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Expect(len(prometheusPods.Items)).To(gomega.BeNumerically(">", 0))
+
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
+	if len(prometheusPods.Items) <= 0 {
+		return bytes.Buffer{}, errors.New("prometheus pods were not found")
+	}
 
 	command := []string{"curl", query}
 	stdout, err := pods.ExecCommand(client.Client, prometheusPods.Items[0], command)
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
 
-	return stdout
+	return stdout, nil
 }
