@@ -7,8 +7,8 @@ import (
 
 	k8scnicncfiov1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned/typed/k8s.cni.cncf.io/v1"
 	"k8s.io/client-go/discovery"
-	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -22,8 +22,8 @@ func init() {
 
 // APISet provides the struct to talk with relevant API
 type APISet struct {
-	corev1client.CoreV1Interface
-	appsv1client.AppsV1Interface
+	corev1.CoreV1Interface
+	appsv1.AppsV1Interface
 	discovery.DiscoveryInterface
 	k8scnicncfiov1.K8sCniCncfIoV1Interface
 	Config *rest.Config
@@ -51,8 +51,8 @@ func New(kubeconfig string) *APISet {
 	}
 
 	clientSet := &APISet{}
-	clientSet.CoreV1Interface = corev1client.NewForConfigOrDie(config)
-	clientSet.AppsV1Interface = appsv1client.NewForConfigOrDie(config)
+	clientSet.CoreV1Interface = corev1.NewForConfigOrDie(config)
+	clientSet.AppsV1Interface = appsv1.NewForConfigOrDie(config)
 	clientSet.DiscoveryInterface = discovery.NewDiscoveryClientForConfigOrDie(config)
 	clientSet.K8sCniCncfIoV1Interface = k8scnicncfiov1.NewForConfigOrDie(config)
 	clientSet.Config = config
