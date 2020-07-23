@@ -17,7 +17,7 @@ type Reply struct {
 	Status string `json:"status"`
 	Data   struct {
 		ResultType string `json:"resultType"`
-		Result     []struct {
+		Results    []struct {
 			Metric struct {
 				Container   string `json:"container"`
 				Endpoint    string `json:"endpoint"`
@@ -29,6 +29,7 @@ type Reply struct {
 				MetricsPath string `json:"metrics_path"`
 				Name        string `json:"name"`
 				Namespace   string `json:"namespace"`
+				NetworkName string `json:"network_name"`
 				Node        string `json:"node"`
 				Pod         string `json:"pod"`
 				Service     string `json:"service"`
