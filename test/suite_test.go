@@ -42,7 +42,7 @@ var _ = ginkgo.BeforeSuite(func() {
 
 	nameSpace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: consts.NamespaceTesting,
+			Name: consts.TestingNamespace,
 		},
 	}
 	_, err := client.Client.Namespaces().Create(context.Background(), nameSpace, metav1.CreateOptions{})
@@ -50,7 +50,7 @@ var _ = ginkgo.BeforeSuite(func() {
 })
 
 var _ = ginkgo.AfterSuite(func() {
-	err := client.Client.Namespaces().Delete(context.Background(), consts.NamespaceTesting, metav1.DeleteOptions{})
+	err := client.Client.Namespaces().Delete(context.Background(), consts.TestingNamespace, metav1.DeleteOptions{})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	err = namespaces.WaitForDeletion(client.Client, consts.NamespaceTesting, 5*time.Minute)
+	err = namespaces.WaitForDeletion(client.Client, consts.TestingNamespace, 10*time.Minute)
 })

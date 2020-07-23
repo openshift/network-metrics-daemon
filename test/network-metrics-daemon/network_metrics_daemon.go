@@ -16,24 +16,32 @@ import (
 	"github.com/openshift/network-metrics-daemon/test/utils/client"
 	"github.com/openshift/network-metrics-daemon/test/utils/consts"
 	"github.com/openshift/network-metrics-daemon/test/utils/namespaces"
+	"github.com/openshift/network-metrics-daemon/test/utils/pods"
 	"github.com/openshift/network-metrics-daemon/test/utils/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	baseURL string = "http://localhost:9090"
+	baseURL     = "http://localhost:9090"
+	workerLabel = "node-role.kubernetes.io/worker="
 )
+
+var metrics = []string{
+	"container_network_receive_bytes_total",
+	"container_network_receive_errors_total",
+	"container_network_receive_packets_total",
+	"container_network_receive_packets_dropped_total",
+	"container_network_transmit_bytes_total",
+	"container_network_transmit_errors_total",
+	"container_network_transmit_packets_total",
+	"container_network_transmit_packets_dropped_total",
+}
 
 var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 	ginkgo.BeforeEach(func() {
-		err := namespaces.Clean(consts.NamespaceTesting, client.Client)
+		err := namespaces.Clean(consts.TestingNamespace, client.Client)
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	})
-
-	ginkgo.It("should check the client connected", func() {
-		ginkgo.By("checking that the client is connected")
-		gomega.Expect(client.Client).ToNot(gomega.BeNil())
 	})
 
 	ginkgo.Context("Network interface metrics", func() {
@@ -43,7 +51,7 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 			metricsPod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "metricpod",
-					Namespace: consts.NamespaceTesting,
+					Namespace: consts.TestingNamespace,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -56,7 +64,7 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 				},
 			}
 
-			metricsPod, err := client.Client.Pods(consts.NamespaceTesting).Create(
+			metricsPod, err := client.Client.Pods(consts.TestingNamespace).Create(
 				context.Background(),
 				metricsPod,
 				metav1.CreateOptions{},
@@ -65,41 +73,66 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 
 			ginkgo.By("waiting for the pod to be ready")
 			gomega.Eventually(func() corev1.PodPhase {
-				podObj, err := client.Client.Pods(consts.NamespaceTesting).Get(context.Background(), metricsPod.Name, metav1.GetOptions{})
+				podObj, err := client.Client.Pods(consts.TestingNamespace).Get(context.Background(), metricsPod.Name, metav1.GetOptions{})
 				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 				return podObj.Status.Phase
-			}, 30*time.Minute, 10*time.Second).Should(gomega.Equal(corev1.PodRunning))
+			}, 5*time.Minute, 5*time.Second).Should(gomega.Equal(corev1.PodRunning))
 		})
 
 		ginkgo.It("should be produced for the Pod's default interface", func() {
-			query := "pod_network_name_info{namespace=\"metrictest\",pod=\"metricpod\"}"
+			query := fmt.Sprintf("pod_network_name_info{namespace=\"%s\",pod=\"metricpod\"}", consts.TestingNamespace)
 			url := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{query}}).Encode())
 
-			queryOutput := queryPrometheusEventually(url, 30*time.Minute, 10*time.Second)
+			queryOutput := queryPrometheusEventually(url, 5*time.Minute, 5*time.Second)
 
 			result := queryOutput.Data.Results[0]
 			gomega.Expect(result.Value[1]).To(gomega.Equal("0"))
 		})
 
 		ginkgo.It("should have the correct network_name and value on top of default pod network", func() {
-			differenceQuery := "((%s) + on(namespace,pod,interface) group_left(network_name) (pod_network_name_info{namespace=\"metrictest\",pod=\"metricpod\"})) - ignoring(network_name) %s{namespace=\"metrictest\",pod=\"metricpod\", interface=\"eth0\"}"
+			ginkgo.By("checking that there is traffic on all networks")
 
-			queries := []string{
-				"container_network_receive_bytes_total",
-				"container_network_receive_errors_total",
-				"container_network_receive_packets_total",
-				"container_network_receive_packets_dropped_total",
-				"container_network_transmit_bytes_total",
-				"container_network_transmit_errors_total",
-				"container_network_transmit_packets_total",
-				"container_network_transmit_packets_dropped_total",
-			}
+			recieveBytesMetric := fmt.Sprintf("container_network_receive_bytes_total{namespace=\"%s\",pod=\"metricpod\", interface=\"eth0\"}", consts.TestingNamespace)
+			reciveBytesURL := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{recieveBytesMetric}}).Encode())
 
-			for _, query := range queries {
-				currentQuery := fmt.Sprintf(differenceQuery, query, query)
+			gomega.Eventually(func() bool {
+				queryOutput := queryPrometheusEventually(reciveBytesURL, 5*time.Minute, 5*time.Second)
+				for _, result := range queryOutput.Data.Results {
+					if result.Value[1] == "0" {
+						return false
+					}
+				}
+				return true
+			}, 5*time.Minute, 5*time.Second).ShouldNot(gomega.Equal(false))
+
+			transmitBytesMetric := fmt.Sprintf("container_network_transmit_bytes_total{namespace=\"%s\",pod=\"metricpod\", interface=\"eth0\"}", consts.TestingNamespace)
+			transmitBytesURL := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{transmitBytesMetric}}).Encode())
+
+			gomega.Eventually(func() bool {
+				queryOutput := queryPrometheusEventually(transmitBytesURL, 5*time.Minute, 5*time.Second)
+				for _, result := range queryOutput.Data.Results {
+					if result.Value[1] == "0" {
+						return false
+					}
+				}
+				return true
+			}, 5*time.Minute, 5*time.Second).ShouldNot(gomega.Equal(false))
+
+			ginkgo.By("checking that difference in traffic is 0")
+
+			differenceQuery := fmt.Sprintf(
+				"((%s) + on(namespace,pod,interface) group_left(network_name) (pod_network_name_info{namespace=\"%s\",pod=\"metricpod\"})) - ignoring(network_name) %s{namespace=\"%s\",pod=\"metricpod\", interface=\"eth0\"}",
+				"%s",
+				consts.TestingNamespace,
+				"%s",
+				consts.TestingNamespace,
+			)
+
+			for _, metric := range metrics {
+				currentQuery := fmt.Sprintf(differenceQuery, metric, metric)
 				url := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{currentQuery}}).Encode())
 
-				queryOutput := queryPrometheusEventually(url, 30*time.Minute, 10*time.Second)
+				queryOutput := queryPrometheusEventually(url, 5*time.Minute, 5*time.Second)
 
 				for _, result := range queryOutput.Data.Results {
 					gomega.Expect(result.Value[1]).To(gomega.Equal("0"))
@@ -108,78 +141,86 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 		})
 	})
 
-	ginkgo.It("Network_attachment_definitions configuration", func() {
-		networkAttachmentDefinition0 := &nettypes.NetworkAttachmentDefinition{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "nad",
-				Namespace: consts.NamespaceTesting,
-			},
-			Spec: nettypes.NetworkAttachmentDefinitionSpec{
-				Config: `{
-							"cniVersion": "0.3.0",
-							"type": "macvlan",
-							"mode": "bridge",
-							"ipam": {
-								"type": "host-local",
-								"ranges": [
-									[ {
-										"subnet": "192.168.200.0/24",
-										"rangeStart": "192.168.200.10",
-										"rangeEnd": "192.168.200.200"
-									} ]
-								]
-							}
-						}`,
-			},
-		}
-		networkAttachmentDefinition1 := &nettypes.NetworkAttachmentDefinition{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "nad2",
-				Namespace: consts.NamespaceTesting,
-			},
-			Spec: nettypes.NetworkAttachmentDefinitionSpec{
-				Config: `{
-							"cniVersion": "0.3.0",
-							"type": "macvlan",
-							"mode": "bridge",
-							"ipam": {
-								"type": "host-local",
-								"ranges": [
-									[ {
-										"subnet": "192.168.202.0/24",
-										"rangeStart": "192.168.202.10",
-										"rangeEnd": "192.168.202.200"
-									} ]
-								]
-							}
-						}`,
-			},
-		}
-
-		_, err := client.Client.NetworkAttachmentDefinitions("metrictest").Create(
-			context.Background(),
-			networkAttachmentDefinition0,
-			metav1.CreateOptions{},
-		)
-		gomega.Expect(err).ToNot(gomega.HaveOccurred())
-
-		_, err = client.Client.NetworkAttachmentDefinitions("metrictest").Create(
-			context.Background(),
-			networkAttachmentDefinition1,
-			metav1.CreateOptions{},
-		)
-		gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	})
-
 	ginkgo.Context("Network Name metric", func() {
+		// workerName is used to create all the pods explicitly on the same worker node
+		var workerName string = ""
+
 		ginkgo.BeforeEach(func() {
+			if workerName == "" {
+				workerList, err := client.Client.Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: workerLabel})
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(len(workerList.Items)).To(gomega.BeNumerically(">", 0))
+				workerName = workerList.Items[0].Name
+			}
+
+			networkAttachmentDefinition0 := &nettypes.NetworkAttachmentDefinition{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nad0",
+					Namespace: consts.TestingNamespace,
+				},
+				Spec: nettypes.NetworkAttachmentDefinitionSpec{
+					Config: `{
+								"cniVersion": "0.3.0",
+								"type": "macvlan",
+								"mode": "bridge",
+								"ipam": {
+									"type": "host-local",
+									"ranges": [
+										[ {
+											"subnet": "192.168.200.0/24",
+											"rangeStart": "192.168.200.10",
+											"rangeEnd": "192.168.200.200"
+										} ]
+									]
+								}
+							}`,
+				},
+			}
+			networkAttachmentDefinition1 := &nettypes.NetworkAttachmentDefinition{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nad1",
+					Namespace: consts.TestingNamespace,
+				},
+				Spec: nettypes.NetworkAttachmentDefinitionSpec{
+					Config: `{
+								"cniVersion": "0.3.0",
+								"type": "macvlan",
+								"mode": "bridge",
+								"ipam": {
+									"type": "host-local",
+									"ranges": [
+										[ {
+											"subnet": "192.168.202.0/24",
+											"rangeStart": "192.168.202.10",
+											"rangeEnd": "192.168.202.200"
+										} ]
+									]
+								}
+							}`,
+				},
+			}
+
+			_, err := client.Client.NetworkAttachmentDefinitions(consts.TestingNamespace).Create(
+				context.Background(),
+				networkAttachmentDefinition0,
+				metav1.CreateOptions{},
+			)
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+			_, err = client.Client.NetworkAttachmentDefinitions(consts.TestingNamespace).Create(
+				context.Background(),
+				networkAttachmentDefinition1,
+				metav1.CreateOptions{},
+			)
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
 			pod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"k8s.v1.cni.cncf.io/networks": "metrictest/nad, metrictest/nad2",
+						"k8s.v1.cni.cncf.io/networks": fmt.Sprintf("%s/nad0, %s/nad1", consts.TestingNamespace, consts.TestingNamespace),
 					},
 					Name:      "metricpod",
-					Namespace: consts.NamespaceTesting,
+					Namespace: consts.TestingNamespace,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -189,10 +230,11 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 							Command: []string{"/bin/bash", "-c", "sleep inf"},
 						},
 					},
+					NodeName: workerName,
 				},
 			}
 
-			pod, err := client.Client.Pods("metrictest").Create(
+			pod, err = client.Client.Pods(consts.TestingNamespace).Create(
 				context.Background(),
 				pod,
 				metav1.CreateOptions{},
@@ -200,17 +242,17 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			gomega.Eventually(func() corev1.PodPhase {
-				podObj, err := client.Client.Pods(consts.NamespaceTesting).Get(context.Background(), pod.Name, metav1.GetOptions{})
+				podObj, err := client.Client.Pods(consts.TestingNamespace).Get(context.Background(), pod.Name, metav1.GetOptions{})
 				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 				return podObj.Status.Phase
-			}, 30*time.Minute, 10*time.Second).Should(gomega.Equal(corev1.PodRunning))
+			}, 5*time.Minute, 5*time.Second).Should(gomega.Equal(corev1.PodRunning))
 		})
 
 		ginkgo.It("should have the correct network_name", func() {
-			query := "(pod_network_name_info{namespace=\"metrictest\",pod=\"metricpod\"})"
+			query := fmt.Sprintf("(pod_network_name_info{namespace=\"%s\",pod=\"metricpod\"})", consts.TestingNamespace)
 			url := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{query}}).Encode())
 
-			queryOutput := queryPrometheusEventually(url, 30*time.Minute, 10*time.Second)
+			queryOutput := queryPrometheusEventually(url, 5*time.Minute, 5*time.Second)
 
 			results := queryOutput.Data.Results
 			gomega.Expect(len(results)).To(gomega.BeNumerically(">=", 2))
@@ -221,7 +263,7 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 					"Metric": gstruct.MatchFields(
 						gstruct.IgnoreExtras,
 						gstruct.Fields{
-							"NetworkName": gomega.Equal("nad"),
+							"NetworkName": gomega.Equal(fmt.Sprintf("%s/nad0", consts.TestingNamespace)),
 						},
 					),
 				},
@@ -233,11 +275,76 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 					"Metric": gstruct.MatchFields(
 						gstruct.IgnoreExtras,
 						gstruct.Fields{
-							"NetworkName": gomega.Equal("nad2"),
+							"NetworkName": gomega.Equal(fmt.Sprintf("%s/nad1", consts.TestingNamespace)),
 						},
 					),
 				},
 			)))
+		})
+
+		ginkgo.It("should return the same values for the new query as the standard query", func() {
+			testPod, err := client.Client.Pods(consts.TestingNamespace).Get(context.Background(), "metricpod", metav1.GetOptions{})
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+			podIP := testPod.Status.PodIP
+			gomega.Expect(podIP).ToNot(gomega.BeEmpty())
+
+			pingPod(podIP, workerName, fmt.Sprintf("%s/nad0", consts.TestingNamespace))
+			pingPod(podIP, workerName, fmt.Sprintf("%s/nad1", consts.TestingNamespace))
+
+			ginkgo.By("checking that there is traffic on all networks")
+
+			recieveBytesMetric := fmt.Sprintf("(container_network_receive_bytes_total{namespace=\"%s\",pod=\"metricpod\", interface=\"net1\"})", consts.TestingNamespace)
+			reciveBytesURL := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{recieveBytesMetric}}).Encode())
+
+			gomega.Eventually(func() bool {
+				queryOutput := queryPrometheusEventually(reciveBytesURL, 5*time.Minute, 5*time.Second)
+				for _, result := range queryOutput.Data.Results {
+					if result.Value[1] == "0" {
+						return false
+					}
+				}
+				return true
+			}, 5*time.Minute, 5*time.Second).ShouldNot(gomega.Equal(false))
+
+			transmitBytesMetric := fmt.Sprintf("(container_network_transmit_bytes_total{namespace=\"%s\",pod=\"metricpod\", interface=\"net1\"})", consts.TestingNamespace)
+			transmitBytesURL := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{transmitBytesMetric}}).Encode())
+
+			gomega.Eventually(func() bool {
+				queryOutput := queryPrometheusEventually(transmitBytesURL, 5*time.Minute, 5*time.Second)
+				for _, result := range queryOutput.Data.Results {
+					if result.Value[1] == "0" {
+						return false
+					}
+				}
+				return true
+			}, 5*time.Minute, 5*time.Second).ShouldNot(gomega.Equal(false))
+
+			ginkgo.By("checking that difference in traffic is 0")
+
+			// for testing in web console :
+			// ---------------------------
+			// differenceQuery = ((container_network_receive_bytes_total) + on(namespace,pod,interface) group_left(network_name) (pod_network_name_info{namespace="metrictest",pod="metricpod",network_name="nad0", interface="net1"})) - ignoring(network_name) (container_network_receive_bytes_total{namespace="metrictest",pod="metricpod", interface="net1"})
+
+			differenceQuery := fmt.Sprintf(
+				"((%s) + on(namespace,pod,interface) group_left(network_name) (pod_network_name_info{namespace=\"%s\",pod=\"metricpod\",network_name=\"%s/nad0\", interface=\"net1\"})) - ignoring(network_name) (%s{namespace=\"%s\",pod=\"metricpod\", interface=\"net1\"})",
+				"%s",
+				consts.TestingNamespace,
+				consts.TestingNamespace,
+				"%s",
+				consts.TestingNamespace,
+			)
+
+			for _, metric := range metrics {
+				currentQuery := fmt.Sprintf(differenceQuery, metric, metric)
+				url := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{currentQuery}}).Encode())
+
+				queryOutput := queryPrometheusEventually(url, 5*time.Minute, 5*time.Second)
+
+				for _, result := range queryOutput.Data.Results {
+					gomega.Expect(result.Value[1]).To(gomega.Equal("0"))
+				}
+			}
 		})
 	})
 })
@@ -262,4 +369,25 @@ func queryPrometheusEventually(query string, total time.Duration, interval time.
 	}, total, interval).ShouldNot(gomega.HaveOccurred())
 
 	return queryOutput
+}
+
+func pingPod(ip string, nodeName string, networkAttachmentDefinition string) {
+	podDefinition := pods.RedifineWithSpecificNode(
+		pods.RedefineWithRestartPolicy(
+			pods.RedefineWithCommand(
+				pods.DefineWithNetworks([]string{networkAttachmentDefinition}),
+				[]string{"/bin/bash", "-c", "ping -c 3 " + ip}, []string{},
+			),
+			corev1.RestartPolicyNever,
+		),
+		nodeName,
+	)
+	createdPod, err := client.Client.Pods(consts.TestingNamespace).Create(context.Background(), podDefinition, metav1.CreateOptions{})
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+	gomega.Eventually(func() corev1.PodPhase {
+		runningPod, err := client.Client.Pods(consts.TestingNamespace).Get(context.Background(), createdPod.Name, metav1.GetOptions{})
+		gomega.Expect(err).ToNot(gomega.HaveOccurred())
+		return runningPod.Status.Phase
+	}, 5*time.Minute, 5*time.Second).Should(gomega.Equal(corev1.PodSucceeded))
 }
