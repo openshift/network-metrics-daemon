@@ -49,6 +49,13 @@ func Clean(namespace string, cs *testclient.APISet) error {
 	err = cs.Pods(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{
 		GracePeriodSeconds: pointer.Int64Ptr(0),
 	}, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = cs.NetworkAttachmentDefinitions(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{
+		GracePeriodSeconds: pointer.Int64Ptr(0),
+	}, metav1.ListOptions{})
 
 	return err
 }

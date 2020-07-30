@@ -1,6 +1,6 @@
 package consts
 
 const (
-	// NamespaceTesting contains the name of the testing namespace
-	NamespaceTesting = "metrictest"
+	// TestingNamespace contains the name of the testing namespace
+	TestingNamespace = "metrictest"
 )
