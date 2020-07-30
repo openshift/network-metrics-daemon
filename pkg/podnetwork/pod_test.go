@@ -10,7 +10,7 @@ import (
 )
 
 const simpleNetworkAnnotation = `[{
-	"name": "kindnet",
+	"name": "default/kindnet",
 	"interface": "eth0",
 	"ips": [
 		"10.244.0.10"
@@ -21,7 +21,7 @@ const simpleNetworkAnnotation = `[{
 }]`
 
 const multipleNetworkAnnotation = `[{
-	"name": "kindnet",
+	"name": "default/kindnet",
 	"interface": "eth0",
 	"ips": [
 		"10.244.0.10"
@@ -30,7 +30,7 @@ const multipleNetworkAnnotation = `[{
 	"default": true,
 	"dns": {}
 },{
-	"name": "macvlan-conf",
+	"name": "namespace1/macvlan-conf",
 	"interface": "net1",
 	"ips": [
 		"192.168.1.200"
@@ -59,7 +59,7 @@ var podNetworkTests = []struct {
 		[]podnetwork.Network{
 			podnetwork.Network{
 				Interface:   "eth0",
-				NetworkName: "kindnet",
+				NetworkName: "default/kindnet",
 			},
 		},
 	},
@@ -76,11 +76,11 @@ var podNetworkTests = []struct {
 		[]podnetwork.Network{
 			podnetwork.Network{
 				Interface:   "eth0",
-				NetworkName: "kindnet",
+				NetworkName: "default/kindnet",
 			},
 			podnetwork.Network{
 				Interface:   "net1",
-				NetworkName: "macvlan-conf",
+				NetworkName: "namespace1/macvlan-conf",
 			},
 		},
 	},

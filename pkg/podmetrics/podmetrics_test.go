@@ -18,36 +18,36 @@ var podMetricsTests = []struct {
 		"twonetworks same network name",
 		func() {
 			networks := []podnetwork.Network{
-				{"eth0", "firstNAD"},
-				{"eth1", "firstNAD"},
+				{"eth0", "namespace1/firstNAD"},
+				{"eth1", "namespace1/firstNAD"},
 			}
 			podmetrics.UpdateForPod("podname", "namespacename", networks)
 		},
 		`
-			pod_network_name_info{interface="eth0",namespace="namespacename",network_name="firstNAD",pod="podname"} 0
-			pod_network_name_info{interface="eth1",namespace="namespacename",network_name="firstNAD",pod="podname"} 0
+			pod_network_name_info{interface="eth0",namespace="namespacename",network_name="namespace1/firstNAD",pod="podname"} 0
+			pod_network_name_info{interface="eth1",namespace="namespacename",network_name="namespace1/firstNAD",pod="podname"} 0
 			`,
 	},
 	{
 		"twonetworks different networkname",
 		func() {
 			networks := []podnetwork.Network{
-				{"eth0", "firstNAD"},
-				{"eth1", "secondNAD"},
+				{"eth0", "namespace1/firstNAD"},
+				{"eth1", "namespace2/secondNAD"},
 			}
 			podmetrics.UpdateForPod("podname", "namespacename", networks)
 		},
 		`
-			pod_network_name_info{interface="eth0",namespace="namespacename",network_name="firstNAD",pod="podname"} 0
-			pod_network_name_info{interface="eth1",namespace="namespacename",network_name="secondNAD",pod="podname"} 0
+			pod_network_name_info{interface="eth0",namespace="namespacename",network_name="namespace1/firstNAD",pod="podname"} 0
+			pod_network_name_info{interface="eth1",namespace="namespacename",network_name="namespace2/secondNAD",pod="podname"} 0
 			`,
 	},
 	{
 		"add and delete",
 		func() {
 			networks := []podnetwork.Network{
-				{"eth0", "firstNAD"},
-				{"eth1", "secondNAD"},
+				{"eth0", "namespace1/firstNAD"},
+				{"eth1", "namespace2/secondNAD"},
 			}
 			podmetrics.UpdateForPod("podname", "namespacename", networks)
 			podmetrics.DeleteAllForPod("podname", "namespacename")
@@ -59,11 +59,11 @@ var podMetricsTests = []struct {
 		"two pods and delete one",
 		func() {
 			networks := []podnetwork.Network{
-				{"eth0", "firstNAD"},
-				{"eth1", "secondNAD"},
+				{"eth0", "namespace1/firstNAD"},
+				{"eth1", "namespace2/secondNAD"},
 			}
 			networks2 := []podnetwork.Network{
-				{"eth0", "firstNAD"},
+				{"eth0", "namespace1/firstNAD"},
 			}
 			podmetrics.UpdateForPod("podname1", "namespacename", networks)
 			podmetrics.UpdateForPod("podname2", "namespacename", networks2)
@@ -71,7 +71,7 @@ var podMetricsTests = []struct {
 
 		},
 		`
-			pod_network_name_info{interface="eth0",namespace="namespacename",network_name="firstNAD",pod="podname2"} 0
+			pod_network_name_info{interface="eth0",namespace="namespacename",network_name="namespace1/firstNAD",pod="podname2"} 0
 
 		`,
 	},

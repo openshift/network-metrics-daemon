@@ -1,5 +1,6 @@
-# network-metrics-daemon
-network-metrics-daemon is a daemon component that collects and publishes network related metrics
+# Network Metrics Daemon
+
+Network Metrics Daemon is a daemon component that collects and publishes network related metrics
 
 ## Rationale
 
@@ -32,8 +33,10 @@ This is addressed by introducing the new `pod_network_name_info` described in th
 This daemonset publishes a `pod_network_name_info` gauge metric, with a fixed value of 0:
 
 ```
-pod_network_name_info{interface="net0",namespace="namespacename",network_name="firstNAD",pod="podname"} 0
+pod_network_name_info{interface="net0",namespace="namespacename",network_name="nadnamespace/firstNAD",pod="podname"} 0
 ```
+
+The network name label is produced using the annotation added by multus. It's the concatenation of the namespace the `network attachment definition` belongs to, plus the name of the `network attachment definition`.
 
 The new metric alone does not provide much value, but combined with the container_network_* metrics mentioned above, it offers a better support for monitoring secondary networks.
 
