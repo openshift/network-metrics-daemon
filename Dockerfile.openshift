@@ -1,5 +1,5 @@
 # This dockerfile is specific to building the network metrics daemon for OpenShift
-FROM openshift/origin-release:golang-1.13 as builder
+FROM registry.svc.ci.openshift.org/ocp/builder:rhel-8-golang-openshift-4.6 as builder
 
 # Add everything
 ENV PKG_NAME=github.com/openshift/network-metrics-daemon
@@ -13,7 +13,7 @@ RUN make build-bin
 
 WORKDIR /
 
-FROM openshift/origin-base
+FROM registry.svc.ci.openshift.org/ocp/4.6:base
 COPY --from=builder /go/src/github.com/openshift/network-metrics-daemon/bin/network-metrics-daemon /usr/bin/network-metrics
 
 LABEL io.k8s.display-name="Network Metrics Daemon" \
