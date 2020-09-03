@@ -70,7 +70,19 @@ func New(
 			controller.enqueuePod(new)
 		},
 		DeleteFunc: func(obj interface{}) {
-			pod := obj.(*v1.Pod)
+			pod, ok := obj.(*v1.Pod)
+			if !ok {
+				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+				if !ok {
+					utilruntime.HandleError(fmt.Errorf("couldn't get object from tombstone %+v", obj))
+					return
+				}
+				pod, ok = tombstone.Obj.(*v1.Pod)
+				if !ok {
+					utilruntime.HandleError(fmt.Errorf("tombstone contained object that is not a RC %#v", obj))
+					return
+				}
+			}
 			if pod.Spec.NodeName != currentNode {
 				return
 			}
