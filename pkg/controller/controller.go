@@ -8,9 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
-	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
@@ -23,29 +21,27 @@ import (
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
-	podsLister    corelisters.PodLister
 	podsSynced    cache.InformerSynced
-
-	workqueue workqueue.RateLimitingInterface
+	indexer       cache.Indexer
+	workqueue     workqueue.RateLimitingInterface
 }
 
 // New returns a new controller listening to pods.
 func New(
 	kubeclientset kubernetes.Interface,
-	podsInformer coreinformers.PodInformer,
+	informer cache.SharedIndexInformer,
 	currentNode string) *Controller {
 
 	controller := &Controller{
 		kubeclientset: kubeclientset,
-
-		podsLister: podsInformer.Lister(),
-		podsSynced: podsInformer.Informer().HasSynced,
-		workqueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
+		indexer:       informer.GetIndexer(),
+		podsSynced:    informer.HasSynced,
+		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
 	}
 
 	klog.Info("Setting up event handlers")
 
-	podsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := obj.(*v1.Pod)
 			_, ok := pod.Annotations[podnetwork.Status]
@@ -172,16 +168,25 @@ func (c *Controller) podHandler(key string) error {
 		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 		return nil
 	}
-
+	obj, exists, err := c.indexer.GetByKey(key)
 	// Get the Pod resource with this namespace/name
-	pod, err := c.podsLister.Pods(namespace).Get(name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			podmetrics.DeleteAllForPod(name, namespace)
 			return nil
 		}
-
 		return err
+	}
+
+	if !exists {
+		podmetrics.DeleteAllForPod(name, namespace)
+		return nil
+	}
+
+	pod, ok := obj.(*v1.Pod)
+	if !ok {
+		utilruntime.HandleError(fmt.Errorf("invalid object for key: %s", key))
+		return nil
 	}
 
 	klog.Infof("Received pod '%s'", pod.Name)

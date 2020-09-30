@@ -1,11 +1,17 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"time"
 
-	kubeinformers "k8s.io/client-go/informers"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 
@@ -52,10 +58,28 @@ func main() {
 		klog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
+	fieldSelector := fmt.Sprintf("spec.nodeName=%s", config.currentNode)
+	informer := cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				return kubeClient.CoreV1().Pods(metav1.NamespaceAll).List(context.Background(),
+					metav1.ListOptions{
+						FieldSelector: fieldSelector,
+					})
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				return kubeClient.CoreV1().Pods(metav1.NamespaceAll).Watch(context.Background(), metav1.ListOptions{
+					FieldSelector: fieldSelector,
+				})
+			},
+		},
+		&v1.Pod{},
+		time.Second*30,
+		cache.Indexers{},
+	)
 
-	ctrl := controller.New(kubeClient, kubeInformerFactory.Core().V1().Pods(), config.currentNode)
-	kubeInformerFactory.Start(stopCh)
+	ctrl := controller.New(kubeClient, informer, config.currentNode)
+	go informer.Run(stopCh)
 
 	podmetrics.Serve(config.metricsAddress, stopCh)
 
