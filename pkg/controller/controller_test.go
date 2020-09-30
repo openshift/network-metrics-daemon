@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -10,7 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/openshift/network-metrics-daemon/pkg/podmetrics"
@@ -58,31 +59,43 @@ func newPod(name, namespace string, networkAnnotation string) *v1.Pod {
 	}
 }
 
-func (f *fixture) newController() (*Controller, kubeinformers.SharedInformerFactory) {
+func (f *fixture) newController() (*Controller, cache.SharedInformer) {
 	f.kubeclient = k8sfake.NewSimpleClientset(f.kubeobjects...)
 
-	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriodFunc())
-	c := New(f.kubeclient, k8sI.Core().V1().Pods(), "NodeName")
+	informer := cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				return f.kubeclient.CoreV1().Pods(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
+			},
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				return f.kubeclient.CoreV1().Pods(metav1.NamespaceAll).Watch(context.Background(), metav1.ListOptions{})
+			},
+		},
+		&v1.Pod{},
+		0, //Skip resync
+		cache.Indexers{},
+	)
+	c := New(f.kubeclient, informer, "NodeName")
 
 	c.podsSynced = alwaysReady
 
 	for _, p := range f.podsLister {
-		k8sI.Core().V1().Pods().Informer().GetIndexer().Add(p)
+		informer.GetIndexer().Add(p)
 	}
 
-	return c, k8sI
+	return c, informer
 }
 
-type testBody func(c *Controller, k8si kubeinformers.SharedInformerFactory)
+type testBody func(c *Controller, informer cache.SharedInformer)
 
 func (f *fixture) run(t testBody) {
-	c, k8sI := f.newController()
+	c, informer := f.newController()
 
 	stopCh := make(chan struct{})
 	defer close(stopCh)
-	k8sI.Start(stopCh)
+	go informer.Run(stopCh)
 
-	t(c, k8sI)
+	t(c, informer)
 }
 
 func TestPublishesMetric(t *testing.T) {
@@ -103,7 +116,7 @@ func TestPublishesMetric(t *testing.T) {
 	pod_network_name_info{interface="eth0",namespace="namespace",network_name="kindnet",pod="podname"} 0
 	`
 
-	f.run(func(c *Controller, k8si kubeinformers.SharedInformerFactory) {
+	f.run(func(c *Controller, informer cache.SharedInformer) {
 		c.podHandler(getKey(pod, t))
 	})
 
@@ -131,12 +144,12 @@ func TestDeletesMetric(t *testing.T) {
 	f.expectedMetrics = `
 	`
 
-	f.run(func(c *Controller, k8si kubeinformers.SharedInformerFactory) {
+	f.run(func(c *Controller, informer cache.SharedInformer) {
 		// send pod, then make it disappear simulating a delete
 		c.podHandler(getKey(pod, t))
 		f.podsLister = []*v1.Pod{}
 		f.kubeobjects = []runtime.Object{}
-		indxr := k8si.Core().V1().Pods().Informer().GetIndexer()
+		indxr := informer.GetStore()
 		for _, p := range indxr.List() {
 			indxr.Delete(p)
 		}
