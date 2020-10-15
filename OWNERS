@@ -3,3 +3,5 @@ approvers:
 - fedepaol
 - SchSeba
 - mmirecki
+component: "Networking"
+subcomponent: "multus"
