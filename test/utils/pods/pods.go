@@ -62,7 +62,7 @@ func getDefinition() *corev1.Pod {
 		Spec: corev1.PodSpec{
 			TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 			Containers: []corev1.Container{{Name: "test",
-				Image:   "centos",
+				Image:   "quay.io/centos/centos",
 				Command: []string{"/bin/bash", "-c", "sleep INF"},
 			}},
 		},
