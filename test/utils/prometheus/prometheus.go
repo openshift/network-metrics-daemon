@@ -42,7 +42,7 @@ type Reply struct {
 // Query allows you to query prometheus
 func Query(query string) (bytes.Buffer, error) {
 	prometheusPods, err := client.Client.Pods(openshiftMonitoringNamespace).List(context.Background(), metav1.ListOptions{
-		LabelSelector: "app=prometheus",
+		LabelSelector: "app.kubernetes.io/name=prometheus",
 	})
 
 	if err != nil {
