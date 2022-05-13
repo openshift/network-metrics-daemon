@@ -62,15 +62,12 @@ func main() {
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-				return kubeClient.CoreV1().Pods(metav1.NamespaceAll).List(context.Background(),
-					metav1.ListOptions{
-						FieldSelector: fieldSelector,
-					})
+				options.FieldSelector = fieldSelector
+				return kubeClient.CoreV1().Pods(metav1.NamespaceAll).List(context.Background(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				return kubeClient.CoreV1().Pods(metav1.NamespaceAll).Watch(context.Background(), metav1.ListOptions{
-					FieldSelector: fieldSelector,
-				})
+				options.FieldSelector = fieldSelector
+				return kubeClient.CoreV1().Pods(metav1.NamespaceAll).Watch(context.Background(), options)
 			},
 		},
 		&v1.Pod{},
