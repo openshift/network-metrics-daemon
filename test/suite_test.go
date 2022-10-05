@@ -43,6 +43,12 @@ var _ = ginkgo.BeforeSuite(func() {
 	nameSpace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: consts.TestingNamespace,
+			Labels: map[string]string{
+				"pod-security.kubernetes.io/audit":               "privileged",
+				"pod-security.kubernetes.io/enforce":             "privileged",
+				"pod-security.kubernetes.io/warn":                "privileged",
+				"security.openshift.io/scc.podSecurityLabelSync": "false",
+			},
 		},
 	}
 	_, err := client.Client.Namespaces().Create(context.Background(), nameSpace, metav1.CreateOptions{})
