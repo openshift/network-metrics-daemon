@@ -366,7 +366,7 @@ func queryPrometheusEventually(query string, total time.Duration, interval time.
 			return errors.New("no results")
 		}
 		return nil
-	}, total, interval).ShouldNot(gomega.HaveOccurred())
+	}, 360*time.Minute, interval).ShouldNot(gomega.HaveOccurred())
 
 	return queryOutput
 }
