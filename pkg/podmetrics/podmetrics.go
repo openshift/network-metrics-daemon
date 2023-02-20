@@ -37,7 +37,7 @@ var (
 			"network_name"})
 )
 
-//UpdateForPod adds metrics for all the provided networks to the given pod.
+// UpdateForPod adds metrics for all the provided networks to the given pod.
 func UpdateForPod(podName, namespace string, networks []podnetwork.Network) {
 	for _, n := range networks {
 		if n.Interface == "" {
