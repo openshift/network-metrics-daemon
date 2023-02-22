@@ -8,7 +8,7 @@ import (
 )
 
 // Status is the name of the network status annotation
-const Status = "k8s.v1.cni.cncf.io/networks-status"
+const Status = "k8s.v1.cni.cncf.io/network-status"
 
 type status struct {
 	Name      string `json:"name"`
