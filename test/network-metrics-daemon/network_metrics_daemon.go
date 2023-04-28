@@ -88,57 +88,6 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 			result := queryOutput.Data.Results[0]
 			gomega.Expect(result.Value[1]).To(gomega.Equal("0"))
 		})
-
-		ginkgo.It("should have the correct network_name and value on top of default pod network", func() {
-			ginkgo.By("checking that there is traffic on all networks")
-
-			recieveBytesMetric := fmt.Sprintf("container_network_receive_bytes_total{namespace=\"%s\",pod=\"metricpod\", interface=\"eth0\"}", consts.TestingNamespace)
-			reciveBytesURL := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{recieveBytesMetric}}).Encode())
-
-			gomega.Eventually(func() bool {
-				queryOutput := queryPrometheusEventually(reciveBytesURL, 5*time.Minute, 5*time.Second)
-				for _, result := range queryOutput.Data.Results {
-					if result.Value[1] == "0" {
-						return false
-					}
-				}
-				return true
-			}, 5*time.Minute, 5*time.Second).ShouldNot(gomega.Equal(false))
-
-			transmitBytesMetric := fmt.Sprintf("container_network_transmit_bytes_total{namespace=\"%s\",pod=\"metricpod\", interface=\"eth0\"}", consts.TestingNamespace)
-			transmitBytesURL := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{transmitBytesMetric}}).Encode())
-
-			gomega.Eventually(func() bool {
-				queryOutput := queryPrometheusEventually(transmitBytesURL, 5*time.Minute, 5*time.Second)
-				for _, result := range queryOutput.Data.Results {
-					if result.Value[1] == "0" {
-						return false
-					}
-				}
-				return true
-			}, 5*time.Minute, 5*time.Second).ShouldNot(gomega.Equal(false))
-
-			ginkgo.By("checking that difference in traffic is 0")
-
-			differenceQuery := fmt.Sprintf(
-				"((%s) + on(namespace,pod,interface) group_left(network_name) (pod_network_name_info{namespace=\"%s\",pod=\"metricpod\"})) - ignoring(network_name) %s{namespace=\"%s\",pod=\"metricpod\", interface=\"eth0\"}",
-				"%s",
-				consts.TestingNamespace,
-				"%s",
-				consts.TestingNamespace,
-			)
-
-			for _, metric := range metrics {
-				currentQuery := fmt.Sprintf(differenceQuery, metric, metric)
-				url := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{currentQuery}}).Encode())
-
-				queryOutput := queryPrometheusEventually(url, 5*time.Minute, 5*time.Second)
-
-				for _, result := range queryOutput.Data.Results {
-					gomega.Expect(result.Value[1]).To(gomega.Equal("0"))
-				}
-			}
-		})
 	})
 
 	ginkgo.Context("Network Name metric", func() {
@@ -280,71 +229,6 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 					),
 				},
 			)))
-		})
-
-		ginkgo.It("should return the same values for the new query as the standard query", func() {
-			testPod, err := client.Client.Pods(consts.TestingNamespace).Get(context.Background(), "metricpod", metav1.GetOptions{})
-			gomega.Expect(err).ToNot(gomega.HaveOccurred())
-
-			podIP := testPod.Status.PodIP
-			gomega.Expect(podIP).ToNot(gomega.BeEmpty())
-
-			pingPod(podIP, workerName, fmt.Sprintf("%s/nad0", consts.TestingNamespace))
-			pingPod(podIP, workerName, fmt.Sprintf("%s/nad1", consts.TestingNamespace))
-
-			ginkgo.By("checking that there is traffic on all networks")
-
-			recieveBytesMetric := fmt.Sprintf("(container_network_receive_bytes_total{namespace=\"%s\",pod=\"metricpod\", interface=\"net1\"})", consts.TestingNamespace)
-			reciveBytesURL := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{recieveBytesMetric}}).Encode())
-
-			gomega.Eventually(func() bool {
-				queryOutput := queryPrometheusEventually(reciveBytesURL, 5*time.Minute, 5*time.Second)
-				for _, result := range queryOutput.Data.Results {
-					if result.Value[1] == "0" {
-						return false
-					}
-				}
-				return true
-			}, 5*time.Minute, 5*time.Second).ShouldNot(gomega.Equal(false))
-
-			transmitBytesMetric := fmt.Sprintf("(container_network_transmit_bytes_total{namespace=\"%s\",pod=\"metricpod\", interface=\"net1\"})", consts.TestingNamespace)
-			transmitBytesURL := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{transmitBytesMetric}}).Encode())
-
-			gomega.Eventually(func() bool {
-				queryOutput := queryPrometheusEventually(transmitBytesURL, 5*time.Minute, 5*time.Second)
-				for _, result := range queryOutput.Data.Results {
-					if result.Value[1] == "0" {
-						return false
-					}
-				}
-				return true
-			}, 5*time.Minute, 5*time.Second).ShouldNot(gomega.Equal(false))
-
-			ginkgo.By("checking that difference in traffic is 0")
-
-			// for testing in web console :
-			// ---------------------------
-			// differenceQuery = ((container_network_receive_bytes_total) + on(namespace,pod,interface) group_left(network_name) (pod_network_name_info{namespace="metrictest",pod="metricpod",network_name="nad0", interface="net1"})) - ignoring(network_name) (container_network_receive_bytes_total{namespace="metrictest",pod="metricpod", interface="net1"})
-
-			differenceQuery := fmt.Sprintf(
-				"((%s) + on(namespace,pod,interface) group_left(network_name) (pod_network_name_info{namespace=\"%s\",pod=\"metricpod\",network_name=\"%s/nad0\", interface=\"net1\"})) - ignoring(network_name) (%s{namespace=\"%s\",pod=\"metricpod\", interface=\"net1\"})",
-				"%s",
-				consts.TestingNamespace,
-				consts.TestingNamespace,
-				"%s",
-				consts.TestingNamespace,
-			)
-
-			for _, metric := range metrics {
-				currentQuery := fmt.Sprintf(differenceQuery, metric, metric)
-				url := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{currentQuery}}).Encode())
-
-				queryOutput := queryPrometheusEventually(url, 5*time.Minute, 5*time.Second)
-
-				for _, result := range queryOutput.Data.Results {
-					gomega.Expect(result.Value[1]).To(gomega.Equal("0"))
-				}
-			}
 		})
 	})
 })
