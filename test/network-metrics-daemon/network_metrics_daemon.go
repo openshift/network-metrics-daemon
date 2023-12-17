@@ -57,7 +57,7 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 					Containers: []corev1.Container{
 						{
 							Name:    "c1",
-							Image:   "quay.io/centos/centos",
+							Image:   consts.TestImage,
 							Command: []string{"/bin/bash", "-c", "sleep inf"},
 						},
 					},
@@ -175,7 +175,7 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 					Containers: []corev1.Container{
 						{
 							Name:    "c1",
-							Image:   "quay.io/centos/centos",
+							Image:   consts.TestImage,
 							Command: []string{"/bin/bash", "-c", "sleep inf"},
 						},
 					},
