@@ -1,7 +1,16 @@
+reviwers:
+- zshi-redhat
+- fedepaol
+- SchSeba
+- dougbtv
+- bpickard22
+- pliurh
 approvers:
 - zshi-redhat
 - fedepaol
 - SchSeba
-- mmirecki
+- dougbtv
+- bpickard22
+- pliurh
 component: "Networking"
 subcomponent: "multus"
