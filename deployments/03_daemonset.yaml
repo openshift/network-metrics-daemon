@@ -26,8 +26,9 @@ spec:
         - name: network-metrics-daemon
           image: $IMAGE_TAG
           command:
-            - /usr/bin/network-metrics
-          args: ["--node-name", "${DOLLAR}(NODE_NAME)"]
+            - "bash"
+            - "-c"
+            - "/usr/bin/network-metrics --node-name ${NODE_NAME}"
           resources:
             requests:
               cpu: 10m
