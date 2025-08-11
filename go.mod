@@ -3,7 +3,7 @@ module github.com/openshift/network-metrics-daemon
 go 1.19
 
 require (
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/golang/glog v1.2.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20200528084921-624c01c5539c
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.20.1
@@ -30,7 +30,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
-	github.com/google/go-cmp v0.5.8 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/hpcloud/tail v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
