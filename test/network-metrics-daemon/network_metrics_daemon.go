@@ -3,14 +3,12 @@ package networkmetrics
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 	"time"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/gstruct"
 
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	"github.com/openshift/network-metrics-daemon/test/utils/client"
@@ -83,10 +81,10 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 			query := fmt.Sprintf("pod_network_name_info{namespace=\"%s\",pod=\"metricpod\"}", consts.TestingNamespace)
 			url := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{query}}).Encode())
 
-			queryOutput := queryPrometheusEventually(url, 5*time.Minute, 5*time.Second)
-
-			result := queryOutput.Data.Results[0]
-			gomega.Expect(result.Value[1]).To(gomega.Equal("0"))
+			queryPrometheusEventually(url, 5*time.Minute, 5*time.Second, func(queryOutput prometheus.Reply) bool {
+				result := queryOutput.Data.Results[0]
+				return result.Value[1] == "0"
+			})
 		})
 	})
 
@@ -201,58 +199,53 @@ var _ = ginkgo.Describe("NetworkMetricsDaemon", func() {
 			query := fmt.Sprintf("(pod_network_name_info{namespace=\"%s\",pod=\"metricpod\"})", consts.TestingNamespace)
 			url := fmt.Sprintf("%s/api/v1/query?%s", baseURL, (url.Values{"query": []string{query}}).Encode())
 
-			queryOutput := queryPrometheusEventually(url, 5*time.Minute, 5*time.Second)
+			queryPrometheusEventually(url, 5*time.Minute, 5*time.Second, func(queryOutput prometheus.Reply) bool {
+				results := queryOutput.Data.Results
 
-			results := queryOutput.Data.Results
-			gomega.Expect(len(results)).To(gomega.BeNumerically(">=", 2))
+				// Check that we have exactly 3 results (default network + 2 additional networks)
+				if len(results) != 3 {
+					return false
+				}
 
-			gomega.Expect(results).To(gomega.ContainElement(gstruct.MatchFields(
-				gstruct.IgnoreExtras,
-				gstruct.Fields{
-					"Metric": gstruct.MatchFields(
-						gstruct.IgnoreExtras,
-						gstruct.Fields{
-							"NetworkName": gomega.Equal(fmt.Sprintf("%s/nad0", consts.TestingNamespace)),
-						},
-					),
-				},
-			)))
+				// Track which networks we've found
+				foundNetworks := make(map[string]bool)
 
-			gomega.Expect(results).To(gomega.ContainElement(gstruct.MatchFields(
-				gstruct.IgnoreExtras,
-				gstruct.Fields{
-					"Metric": gstruct.MatchFields(
-						gstruct.IgnoreExtras,
-						gstruct.Fields{
-							"NetworkName": gomega.Equal(fmt.Sprintf("%s/nad1", consts.TestingNamespace)),
-						},
-					),
-				},
-			)))
+				// Validate each result
+				for _, result := range results {
+					if result.Metric.NetworkName != "" {
+						foundNetworks[result.Metric.NetworkName] = true
+					}
+				}
+
+				// Check that we have both expected networks
+				expectedNad0 := fmt.Sprintf("%s/nad0", consts.TestingNamespace)
+				expectedNad1 := fmt.Sprintf("%s/nad1", consts.TestingNamespace)
+
+				return foundNetworks[expectedNad0] && foundNetworks[expectedNad1]
+			})
 		})
 	})
 })
 
-func queryPrometheusEventually(query string, total time.Duration, interval time.Duration) (queryOutput prometheus.Reply) {
-	gomega.Eventually(func() error {
+func queryPrometheusEventually(query string, total time.Duration, interval time.Duration, validate func(queryOutput prometheus.Reply) bool) {
+	var queryOutput prometheus.Reply
+	gomega.Eventually(func() bool {
 		jsonReply, err := prometheus.Query(query)
 		if err != nil {
-			return err
+			return false
 		}
 		err = json.Unmarshal([]byte(jsonReply.String()), &queryOutput)
 		if err != nil {
-			return err
+			return false
 		}
 		if queryOutput.Status != "success" {
-			return errors.New("query failed")
+			return false
 		}
 		if len(queryOutput.Data.Results) <= 0 {
-			return errors.New("no results")
+			return false
 		}
-		return nil
-	}, total, interval).ShouldNot(gomega.HaveOccurred())
-
-	return queryOutput
+		return validate(queryOutput)
+	}, total, interval).Should(gomega.BeTrue())
 }
 
 func pingPod(ip string, nodeName string, networkAttachmentDefinition string) {
