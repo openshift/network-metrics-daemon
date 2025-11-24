@@ -1,4 +1,4 @@
-FROM golang:1.13 AS builder
+FROM golang:1.24 AS builder
 WORKDIR /go/src/github.com/openshift/network-metrics-daemon
 COPY . .
 RUN make build-bin
