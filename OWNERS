@@ -1,16 +1,36 @@
 reviewers:
-- zshi-redhat
-- fedepaol
-- SchSeba
-- dougbtv
-- bpickard22
-- pliurh
+  - fedepaol
+  - SchSeba
+  - bpickard22
+  - anuragthehatter
+  - arkadeepsen
+  - arghosh93
+  - asood-rh
+  - danwinship
+  - jcaamano
+  - jluhrsen
+  - jechen0648
+  - LionelJouin
+  - martinkennelly
+  - marty-power
+  - mattedallo
+  - miheer
+  - kyrtapz
+  - pperiyasamy
+  - raphaelvrosa
+  - SachinNinganure
+  - shreyasbe
+  - tssurya
+  - taanyas
+  - vinnie1110
+  - weliang1
+  - wizhaoredhat
 approvers:
-- zshi-redhat
-- fedepaol
-- SchSeba
-- dougbtv
-- bpickard22
-- pliurh
+  - fedepaol
+  - SchSeba
+  - bpickard22
+  - LionelJouin
+  - danwinship
+  - wizhaoredhat
 component: "Networking"
 subcomponent: "multus"
