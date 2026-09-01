@@ -6,5 +6,6 @@ set -xeuo pipefail
 export CURPATH=`pwd`
 export BIN_DIR=$CURPATH/bin
 export GO111MODULE=on
+export PATH="${BIN_DIR}:${PATH}"
 
 GOBIN=${BIN_DIR} go install -mod=mod golang.org/x/lint/golint@latest
