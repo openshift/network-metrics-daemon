@@ -1,0 +1,38 @@
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: network-metrics-daemon
+  namespace: network-metrics
+spec:
+  selector:
+    matchLabels:
+      app: network-metrics-daemon
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: network-metrics-daemon
+        component: network
+        type: infra
+    spec:
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: network-metrics-daemon
+          image: $IMAGE_TAG
+          command:
+            - /usr/bin/network-metrics
+          args: ["--node-name", "${DOLLAR}(NODE_NAME)"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 100Mi
+          imagePullPolicy: Always
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+      serviceAccountName: metrics-daemon-sa

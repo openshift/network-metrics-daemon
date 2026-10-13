@@ -1,0 +1,66 @@
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: network-metrics-daemon
+  namespace: $NAMESPACE
+spec:
+  selector:
+    matchLabels:
+      app: network-metrics-daemon
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 33%
+  template:
+    metadata:
+      labels:
+        app: network-metrics-daemon
+        component: network
+        type: infra
+        openshift.io/component: network
+    spec:
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: network-metrics-daemon
+          image: $IMAGE_TAG
+          command:
+            - /usr/bin/network-metrics
+          args: ["--node-name", "${DOLLAR}(NODE_NAME)"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 100Mi
+          imagePullPolicy: Always
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+        - name: kube-rbac-proxy
+          image: $KUBE_RBAC_PROXY
+          args:
+            - --logtostderr
+            - --secure-listen-address=:8443
+            - --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
+            - --upstream=http://127.0.0.1:9091/
+            - --tls-private-key-file=/etc/metrics/tls.key
+            - --tls-cert-file=/etc/metrics/tls.crt
+          ports:
+            - containerPort: 8443
+              name: https
+          resources:
+            requests:
+              cpu: 10m
+              memory: 20Mi
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - name: metrics-certs
+              mountPath: /etc/metrics
+              readOnly: True
+      volumes:
+        - name: metrics-certs
+          secret:
+            secretName: metrics-daemon-secret
+      serviceAccountName: metrics-daemon-sa

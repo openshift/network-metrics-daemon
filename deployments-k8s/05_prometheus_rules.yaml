@@ -1,0 +1,29 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: network-metrics-with-network-name
+  namespace: monitoring
+  labels:
+    app: network-metrics
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+    - name: network_with_name
+      rules:
+        - record: network:container_network_receive_bytes_total
+          expr: (container_network_receive_bytes_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_receive_errors_total
+          expr: (container_network_receive_errors_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_receive_packets_total
+          expr: (container_network_receive_packets_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_receive_packets_dropped_total
+          expr: (container_network_receive_packets_dropped_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_transmit_bytes_total
+          expr: (container_network_transmit_bytes_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_transmit_errors_total
+          expr: (container_network_transmit_errors_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_transmit_packets_total
+          expr: (container_network_transmit_packets_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
+        - record: network:container_network_transmit_packets_dropped_total
+          expr: (container_network_transmit_packets_dropped_total) + on(namespace,pod,interface) group_left(network_name) ( pod_network_name_info )
